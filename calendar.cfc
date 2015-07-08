@@ -8,7 +8,7 @@ component accessors=true
   property type="boolean" name="singleEvents" default=false;
 
   this.root = getDirectoryFromPath(getCurrentTemplatePath());
-  this.jl = new javaloader.javaloader( directoryList( this.root & "\java", true, "path", "*.jar" ));
+  this.jl = new javaloader.javaloader( directoryList( this.root & "/java", true, "path", "*.jar" ));
 
   public Calendar function init()
   {
@@ -25,7 +25,7 @@ component accessors=true
 
     Credential_Builder = jl.create( "com.google.api.client.googleapis.auth.oauth2.GoogleCredential$Builder" );
     Collections = jl.create( "java.util.Collections" );
-    FSkeyFile = jl.create( "java.io.File" ).init( this.root & "\credentials\" & getKeyFile());
+    FSkeyFile = jl.create( "java.io.File" ).init( this.root & "/credentials/" & getKeyFile());
 
     Calendar_Scope = jl.create( "com.google.api.services.calendar.CalendarScopes" ).CALENDAR;
 
