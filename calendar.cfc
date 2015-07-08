@@ -4,6 +4,7 @@ component accessors=true
   property type="string" name="serviceAccountID";
   property type="string" name="calendarID";
   property type="string" name="appName";
+  property type="string" name="timeZone" default="Europe/Amsterdam";
   property type="date" name="startDate";
   property type="boolean" name="singleEvents" default=false;
 
@@ -48,7 +49,7 @@ component accessors=true
 
     if( not isNull( getStartDate()))
     {
-      var tz = jl.create( "java.util.TimeZone" ).getTimeZone( "Europe/Amsterdam" );
+      var tz = jl.create( "java.util.TimeZone" ).getTimeZone( getTimeZone());
       var timeMin = jl.create( 'com.google.api.client.util.DateTime' ).init( getStartDate(), tz );
       return service.events()
         .list( getCalendarID())
