@@ -10,7 +10,7 @@ component accessors=true
   this.root = getDirectoryFromPath(getCurrentTemplatePath());
   this.jl = new javaloader.javaloader( directoryList( this.root & "\java", true, "path", "*.jar" ));
 
-  public google function init()
+  public Calendar function init()
   {
     for( arg in arguments )
     {
@@ -30,14 +30,14 @@ component accessors=true
     Calendar_Scope = jl.create( "com.google.api.services.calendar.CalendarScopes" ).CALENDAR;
 
     credential = Credential_Builder
-        .setTransport( HTTP_Transport )
-        .setJsonFactory( JSON_Factory )
-        .setServiceAccountId( getServiceAccountId())
-        .setServiceAccountScopes( Collections.singleton( Calendar_Scope ))
-        .setServiceAccountPrivateKeyFromP12File( FSkeyFile )
-        .build();
+      .setTransport( HTTP_Transport )
+      .setJsonFactory( JSON_Factory )
+      .setServiceAccountId( getServiceAccountId())
+      .setServiceAccountScopes( Collections.singleton( Calendar_Scope ))
+      .setServiceAccountPrivateKeyFromP12File( FSkeyFile )
+      .build();
 
-		Calendar_Builder = jl.create( "com.google.api.services.calendar.Calendar$Builder" ).init( HTTP_Transport, JSON_Factory, credential );
+    Calendar_Builder = jl.create( "com.google.api.services.calendar.Calendar$Builder" ).init( HTTP_Transport, JSON_Factory, credential );
 
     return this;
   }
