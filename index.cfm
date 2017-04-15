@@ -1,4 +1,4 @@
-<cfset variables.google = new calendar(
+<cfset gCal = new calendar(
   AppName           = "my-first-calendar",
   KeyFile           = "{{PATH-TO-P12-KEY}}",
   ServiceAccountID  = "{{SERVICE-ACCOUNT-ADDRESS}}",
@@ -6,4 +6,4 @@
   startDate         = "#createDate( year( now()), 1, 1 )#"
 ) />
 
-<cfdump var="#variables.google.getEvents().getItems()#" />
+<cfdump var="#gCal.getEvents().getItems()#" />
