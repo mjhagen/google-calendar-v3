@@ -1,72 +1,100 @@
-component accessors=true
-{
-  property type="string" name="keyFile";
-  property type="string" name="serviceAccountID";
-  property type="string" name="calendarID";
-  property type="string" name="appName";
-  property type="string" name="timeZone" default="Europe/Amsterdam";
-  property type="date" name="startDate";
-  property type="boolean" name="singleEvents" default=false;
+component accessors=true {
+  property boolean singleEvents;
+  property date startDate;
+  property string appName;
+  property string calendarId;
+  property string keyFile;
+  property string serviceAccountId;
+  property string timeZone;
 
-  this.root = getDirectoryFromPath(getCurrentTemplatePath());
-  this.jl = new javaloader.javaloader( directoryList( this.root & "/java", true, "path", "*.jar" ));
+  public component function init( ) {
+    var root = getDirectoryFromPath( getCurrentTemplatePath( ) );
 
-  public Calendar function init()
-  {
-    for( arg in arguments )
-    {
-      variables[arg] = arguments[arg];
-    }
+    variables.singleEvents = false;
+    variables.timeZone = "Europe/Amsterdam";
+    variables.jl = new javaloader.javaloader( directoryList( root & "/java", true, "path", "*.jar" ) );
 
-    jl = this.jl;
+    structAppend( variables, arguments, true );
 
-    HTTP_Transport = jl.create( "com.google.api.client.http.javanet.NetHttpTransport" ).init();
-    JSON_Factory = jl.create( "com.google.api.client.json.jackson2.JacksonFactory" ).init();
-    HTTP_Request_Initializer = jl.create( "com.google.api.client.http.HttpRequestInitializer" );
+    var calendarScope = jl.create( "com.google.api.services.calendar.CalendarScopes" ).CALENDAR;
+    var driveScope = jl.create( "com.google.api.services.drive.DriveScopes" ).DRIVE;
+    var collections = jl.create( "java.util.Collections" ).singletonList( calendarScope & " " & driveScope );
+    var credentialsBuilder = jl.create( "com.google.api.client.googleapis.auth.oauth2.GoogleCredential$Builder" );
+    var FSkeyFile = jl.create( "java.io.File" ).init( root & "/credentials/" & keyFile );
+    var httpTransport = jl.create( "com.google.api.client.http.javanet.NetHttpTransport" ).init( );
+    var jsonFactory = jl.create( "com.google.api.client.json.gson.GsonFactory" ).init( );
 
-    Credential_Builder = jl.create( "com.google.api.client.googleapis.auth.oauth2.GoogleCredential$Builder" );
-    Collections = jl.create( "java.util.Collections" );
-    FSkeyFile = jl.create( "java.io.File" ).init( this.root & "/credentials/" & getKeyFile());
-
-    Calendar_Scope = jl.create( "com.google.api.services.calendar.CalendarScopes" ).CALENDAR;
-
-    credential = Credential_Builder
-      .setTransport( HTTP_Transport )
-      .setJsonFactory( JSON_Factory )
-      .setServiceAccountId( getServiceAccountId())
-      .setServiceAccountScopes( Collections.singleton( Calendar_Scope ))
+    var credentials = credentialsBuilder.setTransport( httpTransport )
+      .setJsonFactory( jsonFactory )
+      .setServiceAccountId( serviceAccountId )
+      .setServiceAccountScopes( collections )
       .setServiceAccountPrivateKeyFromP12File( FSkeyFile )
-      .build();
+      .build( );
 
-    Calendar_Builder = jl.create( "com.google.api.services.calendar.Calendar$Builder" ).init( HTTP_Transport, JSON_Factory, credential );
+    variables.calendarService = jl.create( "com.google.api.services.calendar.Calendar$Builder" )
+      .init( httpTransport, jsonFactory, credentials )
+      .setApplicationName( appName )
+      .build( );
+
+    variables.driveService = jl.create( "com.google.api.services.drive.Drive$Builder" )
+      .init( httpTransport, jsonFactory, credentials )
+      .setApplicationName( appName )
+      .build( );
 
     return this;
   }
 
-  public function getEvents()
-  {
-    var service = Calendar_Builder.setApplicationName( getAppName()).build();
+  public function getEvents( ) {
+    var result = calendarService.events( )
+      .list( calendarId )
+      .setSingleEvents( singleEvents );
 
-    if( not isNull( getStartDate()))
-    {
-      var tz = jl.create( "java.util.TimeZone" ).getTimeZone( getTimeZone());
-      var timeMin = jl.create( 'com.google.api.client.util.DateTime' ).init( getStartDate(), tz );
-      return service.events()
-        .list( getCalendarID())
-        .setTimeMin( timeMin )
-        .setSingleEvents( getSingleEvents())
-        .execute();
+    if ( !isNull( startDate ) ) {
+      var tz = jl.create( "java.util.TimeZone" ).getTimeZone( timeZone );
+      var timeMin = jl.create( 'com.google.api.client.util.DateTime' ).init( startDate, tz );
+
+      result.setTimeMin( timeMin );
     }
 
-    return service.events()
-      .list( getCalendarID())
-      .setSingleEvents( getSingleEvents())
+    return result.execute( );
+  }
+
+  public function getEventById( string eventId ) {
+    return calendarService.events()
+      .get( calendarId, eventId )
       .execute();
   }
 
-  public function getInstances( instanceID )
-  {
-    var service = Calendar_Builder.setApplicationName( getAppName()).build();
-    return service.events().instances( getCalendarID(), instanceID ).execute();
+  public function getInstances( instanceID ) {
+    return calendarService.events( )
+      .instances( calendarId, instanceID )
+      .execute( );
+  }
+
+  public function getFile( fileId ) {
+    outputStream = createObject( "java", "java.io.ByteArrayOutputStream" ).init( );
+    driveService.files( )
+      .get( fileId )
+      .executeMediaAndDownloadTo( outputStream );
+    return outputStream;
+  }
+
+  /**
+   * Convert a date in ISO 8601 format to an ODBC datetime.
+   *
+   * @param ISO8601dateString      The ISO8601 date string. (Required)
+   * @param targetZoneOffset      The timezone offset. (Required)
+   * @return Returns a datetime.
+   * @author David Satz (david_satz@hyperion.com)
+   * @version 1, September 28, 2004
+   */
+  public function dateConvertISO8601( ISO8601dateString ) {
+    var rawDatetime = left( ISO8601dateString, 10 ) & " " & mid( ISO8601dateString, 12, 8 );
+
+    if ( !compareNoCase( mid( ISO8601dateString, 24, 1 ), 'z' ) ) {
+      return dateConvert( "utc2local", parseDateTime( rawDatetime ) );
+    }
+
+    return parseDateTime( rawDatetime );
   }
 }
