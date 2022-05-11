@@ -44,7 +44,8 @@ component accessors=true {
   public function getEvents() {
     var result = variables.calendarService.events()
       .list( variables.calendarId )
-      .setSingleEvents( variables.singleEvents );
+      .setSingleEvents( variables.singleEvents )
+      .setMaxResults( 1000 );
 
     if ( !isNull( variables.startDate ) ) {
       var tz = createObject( 'java', 'java.util.TimeZone' ).getTimeZone( timeZone );
